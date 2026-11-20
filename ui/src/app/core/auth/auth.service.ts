@@ -19,6 +19,7 @@ export class AuthService {
   private login?: string;
   private password?: string;
   public connected: boolean = false;
+  private identifiants: string|undefined;
 
 
   /**
@@ -26,20 +27,24 @@ export class AuthService {
    * Basic) et mémorise l'utilisateur. Doit échouer (throw) si le serveur répond 401.
    */
   async connecter(login: string, motDePasse: string): Promise<void> {
-    this.login = login;
-    this.password = motDePasse;
-    return firstValueFrom(this.http.get<void>(`${API}/me`, { params: {  } }))
+    this.identifiants = btoa(`${login}:${motDePasse}`);
+    try {
+      this.utilisateur.set(await firstValueFrom(this.http.get<Utilisateur>(`${API}/me`)));
+      this.connected = true;
+    } catch (e) {
+      this.deconnecter();
+      this.connected = false;
+      throw e;
+    }
   }
 
   deconnecter(): void {
-    // TODO : oublier les identifiants et l'utilisateur.
+    this.identifiants = undefined;
+    this.utilisateur.set(null);
   }
 
   basic():string | undefined {
-    if(this.login && this.password) {
-      return btoa(this.login+":"+this.password);
-    }
-    return undefined;
+    return this.identifiants;
   }
 
   estConnecte():boolean{
